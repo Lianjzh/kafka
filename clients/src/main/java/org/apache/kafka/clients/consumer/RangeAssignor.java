@@ -40,7 +40,7 @@ import java.util.Map;
  * <li><code>C0: [t0p0, t0p1, t1p0, t1p1]</code></li>
  * <li><code>C1: [t0p2, t1p2]</code></li>
  * </ul>
- *
+ * <p>
  * Since the introduction of static membership, we could leverage <code>group.instance.id</code> to make the assignment behavior more sticky.
  * For the above example, after one rolling bounce, group coordinator will attempt to assign new <code>member.id</code> towards consumers,
  * for example <code>C0</code> -> <code>C3</code> <code>C1</code> -> <code>C2</code>.
@@ -50,7 +50,7 @@ import java.util.Map;
  * <li><code>C3 (was C0): [t0p2, t1p2] (before was [t0p0, t0p1, t1p0, t1p1])</code>
  * <li><code>C2 (was C1): [t0p0, t0p1, t1p0, t1p1] (before was [t0p2, t1p2])</code>
  * </ul>
- *
+ * <p>
  * The assignment change was caused by the change of <code>member.id</code> relative order, and
  * can be avoided by setting the group.instance.id.
  * Consumers will have individual instance ids <code>I1</code>, <code>I2</code>. As long as
@@ -83,6 +83,16 @@ public class RangeAssignor extends AbstractPartitionAssignor {
         return topicToConsumers;
     }
 
+    /**
+     * 默认采用的是这种再平衡方式，这种方式分配只是针对消费者订阅的topic的单个topic所有分区再分配，
+     * Consumer Rebalance的算法如下：
+     * 1) 将目标Topic下的所有Partirtion排序，存于TP
+     * 2) 对某Consumer Group下所有Consumer按照名字根据字典排序，存于CG，第i个Consumer记为Ci
+     * 3) N=size(TP)/size(CG)
+     * 4) R=size(TP)%size(CG)
+     * 5) Ci获取的分区起始位置=N*i+min(i,R)
+     * 6) Ci获取的分区总数=N+(if (i+ 1 > R) 0 else 1)
+     */
     @Override
     public Map<String, List<TopicPartition>> assign(Map<String, Integer> partitionsPerTopic,
                                                     Map<String, Subscription> subscriptions) {
